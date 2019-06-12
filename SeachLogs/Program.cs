@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace SeachLogs
 {
@@ -14,21 +11,36 @@ namespace SeachLogs
             var details = new SearchDetails();
 
             Console.Write("Input your search text: ");
-            details.SearchTerm = Console.ReadLine();
+            details.SearchStartPattern = Console.ReadLine();
 
             Console.Write("Input your search end term, leave blank if there is no end term: ");
-            details.EndPattern = Console.ReadLine();
+            details.SearchEndPattern = Console.ReadLine();
 
             Console.Write("Input a file path to search: ");
             details.FilePath = Console.ReadLine();
 
-            if (details.FilePath.Contains("\""))
+            details.FilePath = TrimPath(details.FilePath);
+
+            details = GetStartIndexAndEndIndex(details);
+
+            Console.WriteLine("Reading log");
+            var log = PrecisionReadFile(details);
+
+            Console.WriteLine(log);
+            Console.ReadLine();
+        }
+        public static string TrimPath(string path)
+        {
+            if (path.Contains("\""))
             {
-                details.FilePath = details.FilePath.Trim((char)34);
+                return path = path.Trim((char)34);
+            }
+            else
+            {
+                return path;
             }
         }
-
-        public string StartIndexAndEndIndex(SearchDetails e)
+        public static SearchDetails GetStartIndexAndEndIndex(SearchDetails e)
         {
             int counter = 0;
             string line;
@@ -36,23 +48,27 @@ namespace SeachLogs
             int EndLineNumber = 0;
             bool IsStartIndexFound = false;
 
-            var file =  new System.IO.StreamReader(e.FilePath);
+            var file =  new StreamReader(e.FilePath);
 
             while ((line = file.ReadLine()) != null)
             {
                 if (IsStartIndexFound == false)
                 {
-                    if (line.Contains(e.SearchTerm))
+                    if (line.Contains(e.SearchStartPattern))
                     {
                         StartLineNumber = counter;
+                        e.StartLine = StartLineNumber;
                         IsStartIndexFound = true;
                     }
                 }
                 else
                 {
-                    if (line.Contains(e.EndPattern))
+                    if (line.Contains(e.SearchEndPattern))
                     {
                         EndLineNumber = counter;
+                        e.StartLine = EndLineNumber;
+
+
                         break;
                     }
                 }
@@ -61,10 +77,24 @@ namespace SeachLogs
             }
 
             Console.WriteLine("Start Line: {0}. End Line {1}.",StartLineNumber,EndLineNumber );
-
             file.Close();
+            return e;
+        }
 
-            return StartLineNumber + "|" + EndLineNumber;
+        public static string PrecisionReadFile(SearchDetails e)
+        {
+            var readLength = (e.EndLine - e.StartLine)+1;
+            var lines = File.ReadLines(e.FilePath).Skip(e.StartLine - 1).Take(readLength);
+
+            string log = "";
+            //convert to string
+            foreach (string line in lines)
+            {
+
+                log = log + Environment.NewLine + line;
+               
+            }
+            return log;
         }
 
         //NOTE: string line = File.ReadLines(FileName).Skip(14).Take(1).First();
@@ -72,17 +102,18 @@ namespace SeachLogs
     }
 
 
-
+    
 
     class SearchDetails
     {
         public SearchDetails()
         {
-            EndPattern = "";
+            SearchEndPattern = "";
         }
-        public string SearchTerm { get; set; }
-        public string EndPattern { get; set; }
+        public string SearchStartPattern { get; set; }
+        public string SearchEndPattern { get; set; }
         public string FilePath { get; set; }
-
+        public int StartLine { get; set; }
+        public int EndLine { get; set; }
     }
 }
